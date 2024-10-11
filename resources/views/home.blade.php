@@ -13,7 +13,7 @@
             <div class="inner">
                 <h3>{{ \App\User::count() }}</h3>
 
-                <p>System Users</p>
+                <p>System Users </p>
             </div>
             <div class="icon">
                 <i class="fa fa-user-secret"></i>
