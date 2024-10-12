@@ -63,7 +63,12 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')){
             $input['image'] = '/upload/products/'.str_slug($input['nama'], '-').'.'.$request->image->getClientOriginalExtension();
-            $request->image->move(public_path('/upload/products/'), $input['image']);
+             // Store the file in the 'uploads' folder on S3
+            $path = $request->file('image')->storeAs('uploads', $fileName, 's3');
+
+            // Save the S3 path to the 'image' field
+            $input['image'] = Storage::disk('s3')->url($path);
+            // $request->image->move(public_path('/upload/products/'), $input['image']);
         }
 
         Product::create($input);
@@ -127,13 +132,32 @@ class ProductController extends Controller
 
         $input['image'] = $produk->image;
 
-        if ($request->hasFile('image')){
-            if (!$produk->image == NULL){
-                unlink(public_path($produk->image));
+        // if ($request->hasFile('image')){
+        //     if (!$produk->image == NULL){
+        //         unlink(public_path($produk->image));
+        //     }
+        //     $input['image'] = '/upload/products/'.str_slug($input['nama'], '-').'.'.$request->image->getClientOriginalExtension();
+        //     $request->image->move(public_path('/upload/products/'), $input['image']);
+        // }
+
+        if ($request->hasFile('image')) {
+            // Check if the product already has an existing image and delete it from S3
+            if ($produk->image !== null) {
+                // Extract the S3 file path from the image URL and delete it
+                $oldImagePath = str_replace(Storage::disk('s3')->url(''), '', $produk->image);
+                Storage::disk('s3')->delete($oldImagePath);
             }
-            $input['image'] = '/upload/products/'.str_slug($input['nama'], '-').'.'.$request->image->getClientOriginalExtension();
-            $request->image->move(public_path('/upload/products/'), $input['image']);
+
+            // Generate the new file path with a slugified name
+            $fileName = 'products/' . str_slug($input['nama'], '-') . '.' . $request->image->getClientOriginalExtension();
+
+            // Store the new image on S3 and get the path
+            $path = $request->file('image')->storeAs('uploads', $fileName, 's3');
+
+            // Save the public URL of the uploaded image in the 'image' field
+            $input['image'] = Storage::disk('s3')->url($path);
         }
+
 
         $produk->update($input);
 
@@ -154,7 +178,9 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         if (!$product->image == NULL){
-            unlink(public_path($product->image));
+            // unlink(public_path($product->image));
+            $imagePath = str_replace(Storage::disk('s3')->url(''), '', $product->image);
+            Storage::disk('s3')->delete($imagePath);
         }
 
         Product::destroy($id);
