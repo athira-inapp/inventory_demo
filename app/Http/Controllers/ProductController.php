@@ -64,7 +64,9 @@ class ProductController extends Controller
         if ($request->hasFile('image')){
             $input['image'] = '/upload/products/'.str_slug($input['nama'], '-').'.'.$request->image->getClientOriginalExtension();
              // Store the file in the 'uploads' folder on S3
-            $path = $request->file('image')->storeAs('uploads', $fileName, 's3');
+             $fileName = 'products/' . str_slug($input['nama'], '-') . '.' . $request->image->getClientOriginalExtension();
+
+             $path = $request->file('image')->storeAs('uploads', $fileName, 's3');
 
             // Save the S3 path to the 'image' field
             $input['image'] = Storage::disk('s3')->url($path);
